@@ -1,16 +1,14 @@
-version: '3.8'
-
 services:
   alert-orchestrator:
     # For Synology: if building locally, this will use the locally built image
     # If pulling from Docker Hub, it will use the pushed image
-    image: obenomar/alert-orchestrator:latest # or local if used the build-synology.sh
+    image: obenomar/alert-orchestrator:latest # or local 
     container_name: alert-orchestrator
     
     # Uncomment to build locally instead of pulling from Docker Hub
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
+    #build:
+    #  context: .
+    #  dockerfile: Dockerfile
     
     # Restart policy for reliability
     restart: unless-stopped
@@ -24,9 +22,8 @@ services:
     
     # Volume mounts
     volumes:
-      # Configuration files - mounted from Synology host directory
-      # Change this path to your Synology volume location
-      - /volume2/docker-vol2/liqwid-alertmanager/config:/app/config:ro
+      # Change this path to your location
+      - ./config:/app/config:ro
       
       # Output directory (read-write for diagnostic plots and logs)
       - ./output:/app/output:rw
@@ -39,9 +36,10 @@ services:
       
       # Basic Authentication for protected endpoints (dashboard, recommendations)
       # IMPORTANT: Change these default values to secure credentials!
-      - WO_BASIC_AUTH_USER=admin                         # Dashboard username
-      - WO_BASIC_AUTH_PASS=changeme123                   # Dashboard password (CHANGE THIS!)
-    
+      - WO_BASIC_AUTH_USER=${WO_BASIC_AUTH_USER}                         # Dashboard username
+      - WO_BASIC_AUTH_PASS=${WO_BASIC_AUTH_PASS}                   # Dashboard password (CHANGE THIS!)
+      - LIQWID_MAIN_WALLET_ADDRESS=${LIQWID_MAIN_WALLET_ADDRESS}
+      - LIQWID_WALLET_OTHER_ADDRESS=${LIQWID_WALLET_OTHER_ADDRESS}   
     # Network configuration
     networks:
       - orchestrator-net
@@ -64,21 +62,3 @@ services:
 networks:
   orchestrator-net:
     driver: bridge
-
-# Configuration Notes:
-# 
-# 1. Config Directory: 
-#    Ensure /volume2/docker-vol2/liqwid-alertmanager/config/ exists on your Synology NAS
-#    and contains these files:
-#    - orchestrator_config.yaml
-#    - token_registry.csv
-#
-# 2. Authentication:
-#    Protected endpoints (dashboard, recommendations) require Basic Auth.
-#    Set secure credentials by changing WO_BASIC_AUTH_USER and WO_BASIC_AUTH_PASS
-#    environment variables above.
-#
-# 3. Endpoints:
-#    - Public:  http://synology-ip:9808/metrics (Prometheus metrics)
-#    - Private: http://synology-ip:9808/dashboard (requires auth)
-

@@ -6,7 +6,7 @@ settings:
 
 wallets:
   - address_env: "LIQWID_MAIN_WALLET_ADDRESS"
-  - address_env: "LIQWID_WALLET_ENFANTS_ADDRESS"
+  - address_env: "LIQWID_WALLET_OTHER_ADDRESS"
 
 domain:
   assets: ["djed", "usdc", "usdt", "usdm", "usda", "iusd"]
@@ -113,8 +113,8 @@ runtime:
       price_delta_rel: true
       price_mismatch: true
       price_compare_unavailable: true
-      rate_usd: false
-      rate_ada: false
+      rate_usd: true
+      rate_ada: true
 
 visualization:
   diagnostics:
