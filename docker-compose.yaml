@@ -2,7 +2,8 @@ services:
   alert-orchestrator:
     # For Synology: if building locally, this will use the locally built image
     # If pulling from Docker Hub, it will use the pushed image
-    image: obenomar/alert-orchestrator:latest # or local 
+    #image: obenomar/alert-orchestrator:latest # or local 
+    image: ghcr.io/othmanb/alertorchestratorstablescardano:latest
     container_name: alert-orchestrator
     
     # Uncomment to build locally instead of pulling from Docker Hub
