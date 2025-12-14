@@ -5,7 +5,7 @@
 # ============================================================================
 # Stage 1: Builder - Compile dependencies for target architecture
 # ============================================================================
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Suppress debconf warnings in non-interactive build
 ENV DEBIAN_FRONTEND=noninteractive
@@ -76,22 +76,18 @@ ARG USER_GID=100
 ARG USER_NAME=monitoring
 ARG USER_GROUP=users
 
-# Create user with matching UID/GID
-# Note: Group 100 (users) already exists in base image, so groupadd may fail - that's okay
-#RUN (groupadd -g ${USER_GID} orchestrator 2>/dev/null || echo "Group ${USER_GID} already exists") && \
-#    useradd -m -u ${USER_UID} -g ${USER_GID} -s /bin/bash orchestrator && \
-#    chown -R orchestrator:orchestrator /app
-# GID 100 is the 'users' group in Debian (already exists), so we use it directly
-# We create the user with the specified UID and assign them to the existing GID
-RUN useradd -m -u ${USER_UID} -g ${USER_GID} -s /bin/bash ${USER_NAME} && \
-    chown -R ${USER_NAME}:${USER_GROUP} /app
+# Create group and user with matching UID/GID
+# Group may already exist (e.g., GID 100 = users), so we ignore groupadd failures
+RUN (groupadd -g ${USER_GID} ${USER_GROUP} 2>/dev/null || true) && \
+    useradd -m -u ${USER_UID} -g ${USER_GID} -s /bin/bash ${USER_NAME} && \
+    chown -R ${USER_NAME}:${USER_GID} /app
 
 # Switch to non-root user
 USER ${USER_NAME}
 
 # Set environment variables
 ENV PATH="/opt/venv/bin:$PATH" \
-    PYTHONPATH="/app:${PYTHONPATH}" \
+    PYTHONPATH="/app" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     CONFIG_PATH="/app/config/orchestrator_config.yaml"
