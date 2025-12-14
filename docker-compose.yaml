@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  alert-orchestrator:
+    # For Synology: if building locally, this will use the locally built image
+    # If pulling from Docker Hub, it will use the pushed image
+    image: obenomar/alert-orchestrator:latest # or local if used the build-synology.sh
+    container_name: alert-orchestrator
+    
+    # Uncomment to build locally instead of pulling from Docker Hub
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    
+    # Restart policy for reliability
+    restart: unless-stopped
+    
+    # Note: Resource limits removed - Synology Docker doesn't support CPU CFS scheduler
+    # You can set memory limits via Synology Container Manager UI if needed
+    
+    # Port mapping: host:container
+    ports:
+      - "9808:9808"  # Prometheus metrics endpoint
+    
+    # Volume mounts
+    volumes:
+      # Configuration files - mounted from Synology host directory
+      # Change this path to your Synology volume location
+      - /volume2/docker-vol2/liqwid-alertmanager/config:/app/config:ro
+      
+      # Output directory (read-write for diagnostic plots and logs)
+      - ./output:/app/output:rw
+    
+    # Environment variables
+    environment:
+      - TZ=Asia/Tokyo                                    # Timezone (matches config)
+      - LOG_LEVEL=INFO                                   # Logging verbosity
+      - CONFIG_PATH=/app/config/orchestrator_config.yaml
+      
+      # Basic Authentication for protected endpoints (dashboard, recommendations)
+      # IMPORTANT: Change these default values to secure credentials!
+      - WO_BASIC_AUTH_USER=admin                         # Dashboard username
+      - WO_BASIC_AUTH_PASS=changeme123                   # Dashboard password (CHANGE THIS!)
+    
+    # Network configuration
+    networks:
+      - orchestrator-net
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:9808/metrics').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  orchestrator-net:
+    driver: bridge
+
+# Configuration Notes:
+# 
+# 1. Config Directory: 
+#    Ensure /volume2/docker-vol2/liqwid-alertmanager/config/ exists on your Synology NAS
+#    and contains these files:
+#    - orchestrator_config.yaml
+#    - token_registry.csv
+#
+# 2. Authentication:
+#    Protected endpoints (dashboard, recommendations) require Basic Auth.
+#    Set secure credentials by changing WO_BASIC_AUTH_USER and WO_BASIC_AUTH_PASS
+#    environment variables above.
+#
+# 3. Endpoints:
+#    - Public:  http://synology-ip:9808/metrics (Prometheus metrics)
+#    - Private: http://synology-ip:9808/dashboard (requires auth)
+

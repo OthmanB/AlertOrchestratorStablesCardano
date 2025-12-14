@@ -1,0 +1,51 @@
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.coverage
+.tox/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Output directories (will be mounted as volumes)
+output/
+plots/
+
+# Test files and scripts
+tests/
+scripts/
+sandbox/
+
+# Development files
+debug.log
+*.log
+test_*.py
+*_test.py

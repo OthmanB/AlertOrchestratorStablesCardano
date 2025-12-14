@@ -1,0 +1,149 @@
+# Alert Orchestrator configuration (v2 schema)
+# NOTE: Inline comments explain each parameter.
+settings:
+  timezone: "Asia/Tokyo"
+  currency: "usd"
+
+wallets:
+  - address_env: "LIQWID_MAIN_WALLET_ADDRESS"
+  - address_env: "LIQWID_WALLET_ENFANTS_ADDRESS"
+
+domain:
+  assets: ["djed", "usdc", "usdt", "usdm", "usda", "iusd"]
+
+data:
+  databases:
+    greptime:
+      host: "http://localhost"
+      port: 7010
+      database: "liqwid"
+      timeout: 10
+  datasets:
+    transactions:
+      alignment_method: "detect_spike"  # none | right_open | detect_spike | snap_to_*
+      sources:
+        liqwid:
+          table_asset_prefix: "liqwid_supply_positions_"
+          deposits_prefix: "liqwid_deposits_"
+          withdrawals_prefix: "liqwid_withdrawals_"
+        minswap:
+          table_price_prefix: "minswap_prices_"
+  date_range:
+    start: "2025-11-04"
+    end: null
+
+prices:
+  sources: ["liqwid", "minswap"]
+  duty_cycle_threshold: 0.9
+  endpoints:
+    liqwid_graphql: "https://v2.api.liqwid.finance/graphql"
+    koios: "https://api.koios.rest/api/v1"
+    minswap_aggregator: "https://agg-api.minswap.org"
+  priority_by_logical:
+    liqwid: ["greptime(liqwid)", "liqwid"]
+    minswap: ["greptime(minswap)", "minswap"]
+  # Transaction sync settings
+  transaction_sync:
+    start_date: "2025-07-01"  # Default start date for transaction sync (ISO format: YYYY-MM-DD)
+    end_date: null             # Default end date (null = now)
+
+analysis:
+  trend_indicator:
+    enabled: true
+    method: "polynomial_fit"     # moving_average | polynomial_fit
+    polynomial_order: 2
+    window_size_hours: 24.0      # used if moving_average
+    window_type: "polynomial"  # polynomial | gaussian | boxcar | none
+    gaussian_kde_sigma_fraction: 0.3
+    per_asset: {}
+  decision:
+    reference:
+      keyword: "alert_driven"
+      fallback: "data_range"       # or null
+      plot_fallback: "plot_range"  # For gains calculation on dashboard (plot_range → data_range)
+    gate:
+      enabled: true
+      basis: "change_rate_usd"  # change_rate_usd | corrected_position
+      method: "median"             # median | polynomial_fit
+      polynomial_order: 1
+      threshold_mode: "percentile" # stddev | percentile
+      central_confidence: 0.68
+      k_sigma: 2.0
+      min_points: 20
+      exclude_last_for_sigma: true
+      lookback_hours: null
+      sigma_epsilon: 1e-6
+    safety_factor:
+      c: 0.5
+  price_compare:
+    enabled: true
+    sources: "@prices.sources"     # list-based; drop primary/secondary
+    epsilon_mode: "relative"
+    tolerance_epsilon: 0.01
+    persistence_threshold: 1
+    action_on_mismatch: "hold"
+    per_asset_overrides: {}
+
+runtime:
+  auth:
+    enabled: true
+  schedule:
+    interval_minutes: 60
+  telemetry:
+    enabled: true
+    listen_address: "0.0.0.0"
+    listen_port: 9808
+    path: "/metrics"
+    metric_prefix: "wo_"
+    expose:
+      decision: true
+      wmax_usd: true
+      residual_usd: true
+      sigma_usd: true
+      k_sigma: true
+      residual_trigger: true
+      t0_timestamp_seconds: true
+      t1_timestamp_seconds: true
+      v_ref_usd: false
+      v_t1_usd: false
+      g_usd: false
+      price_t1_usd: false
+      price_usd_by_source: true
+      price_delta_abs: true
+      price_delta_rel: true
+      price_mismatch: true
+      price_compare_unavailable: true
+      rate_usd: false
+      rate_ada: false
+
+visualization:
+  diagnostics:
+    enabled: false
+    dir: "output/plots"
+    hist_samples_per_bin: 10
+    include_sigma_band: false
+    include_k_sigma_band: false
+    lookback_hours_override: null
+    # Plot-specific range control (decoupled from data sync range)
+    plot_range:
+      start: null              # ISO datetime or null (inherits from data.date_range)
+      end: null                # ISO datetime or null (inherits from data.date_range)
+      mode: "inherit"          # "inherit" | "custom" | "relative"
+      relative_duration: null  # e.g., "7d", "30d" (when mode=relative, counted back from now)
+    # Data aggregation for performance optimization (visualization only)
+    aggregation:
+      enabled: true            # Toggle aggregation on/off (default: true for performance)
+      method: "whiskers"       # "whiskers" | "none"
+      time_unit: "1d"          # Default time unit for aggregation (can be any valid interval)
+                               # Valid: "1min" | "5min" | "15min" | "30min" | "1h" | "6h" | "12h" | "1d" | "3d" | "1w"
+      ui_time_units: ["5min", "15min", "1h", "6h", "1d", "3d", "1w"]  # Time units shown in UI dropdown
+      percentiles: [10, 25, 50, 75, 90]  # For whisker plots
+      show_raw_points: false   # Show raw data points in addition to whiskers (default: false)
+
+maintenance:
+  cleanup:
+    enabled: true
+    expire_before: "7d"
+    paths:
+      - "output"
+    extensions: [".png", ".jpg", ".jpeg", ".svg", ".csv", ".tsv", ".json", ".log"]
